@@ -20,6 +20,6 @@ cd "$LOVEDIR" || exit
 SET_VAR "system" "foreground_process" "love"
 export LD_LIBRARY_PATH="$LOVEDIR/libs:$LD_LIBRARY_PATH"
 $GPTOKEYB "love" &
-./love gp.love
+./love gplove
 kill -9 "$(pidof gptokeyb2.armhf)"
 
