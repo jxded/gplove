@@ -34,6 +34,13 @@ target_link_libraries(gplove PRIVATE
     ${SDL2_IMAGE_LIBRARIES}
 )
 
+add_custom_command(TARGET gplove POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:gplove>/assets
+    COMMENT "Copying assets to build directory"
+)
+
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(TARGET gplove POST_BUILD
         COMMAND ${CMAKE_STRIP} $<TARGET_FILE:gplove>
