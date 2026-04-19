@@ -17,14 +17,10 @@ void Renderer::draw_circle_outline(int cx, int cy, int r) {
 
 // uses points list and SDL_RenderDrawPoints (plural) to batch & reduce gpu draw calls..
 void Renderer::draw_filled_circle(int cx, int cy, int r) {
-    //m_circle_buf.reserve(r * 8);  // rough estimate
-    m_circle_buf.clear();
-    for (int dy = -r; dy <= r; ++dy) {
-        int dx = (int)sqrtf((float)(r * r - dy * dy));
-        for (int x = cx - dx; x <= cx + dx; ++x)
-            m_circle_buf.push_back({x, cy + dy});
-    }
-    SDL_RenderDrawPoints(m_ren, m_circle_buf.data(), (int)m_circle_buf.size());
+    if (!m_circle_tex) return;
+    SDL_Rect dst = {cx - r, cy - r, r * 2, r * 2};
+    // TODO add tint/fades
+    SDL_RenderCopy(m_ren, m_circle_tex, nullptr, &dst);
 }
 
 bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
@@ -40,6 +36,8 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
     //preallocate buffers to avoid millions of mallocs..
     m_point_buf.reserve(16200);
     m_circle_buf.reserve(1024);
+
+    m_circle_tex = create_circle_texture(15);
 
     return true;
 }
@@ -57,6 +55,34 @@ void Renderer::begin_frame() {
 
 void Renderer::end_frame() {
     SDL_RenderPresent(m_ren);
+}
+// testing pre-rendered circle texture..
+SDL_Texture* Renderer::create_circle_texture(int r) {
+    int size = r * 2;
+    SDL_Texture* tex = SDL_CreateTexture(
+        m_ren,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_TARGET,
+        size, size);
+    if (!tex) return nullptr;
+
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+
+    SDL_Texture* old = SDL_GetRenderTarget(m_ren);
+    SDL_SetRenderTarget(m_ren, tex);
+
+    SDL_SetRenderDrawColor(m_ren, 0, 0, 0, 0);
+    SDL_RenderClear(m_ren);
+
+    SDL_SetRenderDrawColor(m_ren, 255, 255, 255, 255);
+    for (int dy = -r; dy <= r; ++dy) {
+        int dx = (int)sqrtf((float)(r * r - dy * dy));
+        for (int x = -dx; x <= dx; ++x)
+            SDL_RenderDrawPoint(m_ren, r + x, r + dy);
+    }
+
+    SDL_SetRenderTarget(m_ren, old);
+    return tex;
 }
 
 // helper method for text rendering with caching to improve performance

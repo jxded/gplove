@@ -68,6 +68,8 @@ private:
     std::vector<SDL_Point> m_point_buf;
     std::vector<SDL_Point> m_circle_buf;
 
+    SDL_Texture* m_circle_tex = nullptr;
+    SDL_Texture* create_circle_texture(int r);
 
     // Button layout center coordinate constants
     static constexpr int LS_CX  = 160, LS_CY  = 320;
