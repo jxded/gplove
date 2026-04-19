@@ -8,7 +8,7 @@
 
 
 struct Config {
-    float trail_duration_ms = 2300.0f;
+    float trail_duration_ms = 750.0f;
     float fade_duration_ms  =  300.0f;
     float stick_range       =   80.0f;  // px, center to edge
     int   screen_w          =  640;

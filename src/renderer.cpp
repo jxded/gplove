@@ -38,7 +38,7 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
     }
 
     //preallocate buffers to avoid millions of mallocs..
-    m_point_buf.reserve(8192);
+    m_point_buf.reserve(16200);
     m_circle_buf.reserve(1024);
 
     return true;
