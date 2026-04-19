@@ -1,1 +1,10 @@
+build-native/
+build-aarch64/
+
 .DS_Store
+Thumbs.db
+
+.vscode/
+
+# symlinked for LSP support from build directories
+compile_commands.json  
