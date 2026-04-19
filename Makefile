@@ -7,6 +7,10 @@ ifeq ($(UNAME_S), Darwin)
   TOOLCHAIN     = cmake/aarch64-toolchain-mac.cmake
   CROSS_STRIP   = aarch64-unknown-linux-gnu-strip
   CROSS_READELF = aarch64-unknown-linux-gnu-readelf
+  BREW_PREFIX   := $(shell brew --prefix)
+  PKG_CONFIG_PATH := $(BREW_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
+  LDFLAGS       := -L$(BREW_PREFIX)/lib $(LDFLAGS)
+  CPPFLAGS      := -I$(BREW_PREFIX)/include $(CPPFLAGS)
 else
   # Linux (CachyOS / Arch intended..)
   NPROC        := $(shell nproc)
@@ -24,6 +28,9 @@ BUILD_NATIVE   = build-native
 
 # Desktop build and run 
 run-native:
+	PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+	LDFLAGS="$(LDFLAGS)" \
+	CPPFLAGS="$(CPPFLAGS)" \
 	cmake -B $(BUILD_NATIVE) -DCMAKE_BUILD_TYPE=Debug -G Ninja --log-level=WARNING
 	cmake --build $(BUILD_NATIVE) -j$(NPROC) # --quiet
 	cd $(BUILD_NATIVE) && \
@@ -32,6 +39,9 @@ run-native:
 
 # aarch64 cross-compile 
 configure-cross:
+	PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+	LDFLAGS="$(LDFLAGS)" \
+	CPPFLAGS="$(CPPFLAGS)" \
 	cmake -B $(BUILD_AARCH64) \
 	  -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) \
 	  -DCMAKE_BUILD_TYPE=Release \
