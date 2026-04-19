@@ -59,6 +59,10 @@ private:
     std::unordered_map<std::string, CachedText> m_text_cache;
     void clear_text_cache();
 
+    // forced axis string update rate
+    uint32_t m_axis_update_time = 0;
+    std::string m_left_axis_str;
+    std::string m_right_axis_str;
 
     // Button layout center coordinate constants
     static constexpr int LS_CX  = 160, LS_CY  = 320;

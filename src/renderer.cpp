@@ -222,18 +222,34 @@ void Renderer::draw(const GamepadState& state,
     draw_triggers(state);
     draw_dpad(state);
 
-    // Raw axis values
-    char buf[64];
-    if (!lt.points().empty()) {
-        auto& p = lt.points().back();
-        snprintf(buf, sizeof(buf), "(%.2f, %.2f)", p.x, p.y);
-        print(buf, 110, 410);
+    // Raw axis values, rate limited to avoid excessive text rendering and cache churn
+    if (now_ms - m_axis_update_time > 100) {
+        m_axis_update_time = now_ms;
+        if (!lt.points().empty()) {
+            auto& p = lt.points().back();
+            char buf[32];
+            snprintf(buf, sizeof(buf), "(%.2f, %.2f)", p.x, p.y);
+            m_left_axis_str = buf;
+        }
+        if (!rt.points().empty()) {
+            auto& p = rt.points().back();
+            char buf[32];
+            snprintf(buf, sizeof(buf), "(%.2f, %.2f)", p.x, p.y);
+            m_right_axis_str = buf;
+        }
+        // Clear only the axis cache entries so stale values dont accumulate
+        // (static strings like "Connected: ..." stay cached forever)
+        for (auto it = m_text_cache.begin(); it != m_text_cache.end(); ) {
+            if (it->first.find("(") != std::string::npos) {
+                SDL_DestroyTexture(it->second.texture);
+                it = m_text_cache.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
-    if (!rt.points().empty()) {
-        auto& p = rt.points().back();
-        snprintf(buf, sizeof(buf), "(%.2f, %.2f)", p.x, p.y);
-        print(buf, 430, 410);
-    }
+    if (!m_left_axis_str.empty())  print(m_left_axis_str, 110, 410);
+    if (!m_right_axis_str.empty()) print(m_right_axis_str, 430, 410);
 
     print("Press Select + Start to quit", 190, 50);
 
