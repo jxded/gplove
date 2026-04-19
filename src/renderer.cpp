@@ -15,11 +15,16 @@ void Renderer::draw_circle_outline(int cx, int cy, int r) {
     }
 }
 
+// uses points list and SDL_RenderDrawPoints (plural) to batch & reduce gpu draw calls..
 void Renderer::draw_filled_circle(int cx, int cy, int r) {
+    //m_circle_buf.reserve(r * 8);  // rough estimate
+    m_circle_buf.clear();
     for (int dy = -r; dy <= r; ++dy) {
         int dx = (int)sqrtf((float)(r * r - dy * dy));
-        SDL_RenderDrawLine(m_ren, cx - dx, cy + dy, cx + dx, cy + dy);
+        for (int x = cx - dx; x <= cx + dx; ++x)
+            m_circle_buf.push_back({x, cy + dy});
     }
+    SDL_RenderDrawPoints(m_ren, m_circle_buf.data(), (int)m_circle_buf.size());
 }
 
 bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
@@ -32,6 +37,10 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
         return false;
     }
     return true;
+
+    //preallocate buffers to avoid millions of mallocs..
+    m_point_buf.reserve(8192);
+    m_circle_buf.reserve(1024);
 }
 
 void Renderer::shutdown() {
@@ -105,7 +114,8 @@ void Renderer::draw_stick(int cx, int cy, const StickTrail& trail, bool pressed,
     SDL_SetRenderDrawColor(m_ren, 50, 50, 50, 255);
     draw_circle_outline(cx, cy, range);
 
-    // trail points
+    // trail points (batched draw call)
+    m_point_buf.clear();
     SDL_SetRenderDrawBlendMode(m_ren, SDL_BLENDMODE_BLEND);
     for (auto& pt : trail.points()) {
         float age   = float(now_ms - pt.timestamp_ms);
@@ -120,8 +130,10 @@ void Renderer::draw_stick(int cx, int cy, const StickTrail& trail, bool pressed,
         for (int dy = -5; dy <= 5; ++dy)
             for (int dx = -5; dx <= 5; ++dx)
                 if (dx*dx + dy*dy <= 25)
-                    SDL_RenderDrawPoint(m_ren, px+dx, py+dy);
+                    m_point_buf.push_back({px+dx, py+dy});
+                //tradeoff: loss of individualised alpha for each point, testing
     }
+    SDL_RenderDrawPoints(m_ren, m_point_buf.data(), m_point_buf .size());
 
     if (trail.points().empty()) return;
 

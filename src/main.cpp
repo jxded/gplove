@@ -6,7 +6,8 @@
 #include "trail.h"
 
 int main(int /*argc*/, char* /*argv*/[]) {
-
+    // best, at least on metal, to not do forced fps caps as it conflicts with metal's internal
+    // frame pacing (vsync..) just rely on SDL_RENDERER_PRESENTVSYNC for now
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_TIMER) != 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
