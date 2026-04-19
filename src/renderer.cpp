@@ -36,11 +36,12 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
         fprintf(stderr, "TTF_OpenFont failed: %s\n", TTF_GetError());
         return false;
     }
-    return true;
 
     //preallocate buffers to avoid millions of mallocs..
     m_point_buf.reserve(8192);
     m_circle_buf.reserve(1024);
+
+    return true;
 }
 
 void Renderer::shutdown() {
