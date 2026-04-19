@@ -4,6 +4,8 @@
 #include <string>
 #include "input.h"
 #include "trail.h"
+#include <unordered_map>
+
 
 struct Config {
     float trail_duration_ms = 2300.0f;
@@ -11,6 +13,11 @@ struct Config {
     float stick_range       =   80.0f;  // px, center to edge
     int   screen_w          =  640;
     int   screen_h          =  480;
+};
+
+struct CachedText {
+    SDL_Texture* texture = nullptr;
+    int w = 0, h = 0;
 };
 
 class Renderer {
@@ -37,16 +44,22 @@ private:
     void draw_dpad(const GamepadState& s);
     void print(const std::string& text, int x, int y,
                uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
-    void update_fps(uint32_t now_ms);
     
     SDL_Renderer* m_ren  = nullptr;
     TTF_Font*     m_font = nullptr;
     Config        m_cfg;
-
+    
+    // FPS display variables
     uint32_t m_fps_last_time = 0;
     int      m_fps_count     = 0;
     int      m_fps           = 0;
+    void update_fps(uint32_t now_ms);
     
+    // Helper methods to cache rendered text textures for performance
+    std::unordered_map<std::string, CachedText> m_text_cache;
+    void clear_text_cache();
+
+
     // Button layout center coordinate constants
     static constexpr int LS_CX  = 160, LS_CY  = 320;
     static constexpr int RS_CX  = 480, RS_CY  = 320;

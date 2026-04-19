@@ -35,6 +35,7 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
 }
 
 void Renderer::shutdown() {
+    clear_text_cache();
     if (m_font) { TTF_CloseFont(m_font); m_font = nullptr; }
     TTF_Quit();
 }
@@ -48,22 +49,42 @@ void Renderer::end_frame() {
     SDL_RenderPresent(m_ren);
 }
 
-// helper method for text rendering (unoptimised)
+// helper method for text rendering with caching to improve performance
 void Renderer::print(const std::string& text, int x, int y,
                      uint8_t r, uint8_t g, uint8_t b) {
     if (!m_font) return;
-    SDL_Color col = {r, g, b, 255};
-    // SDL_Surface* surf = TTF_RenderText_Blended(m_font, text.c_str(), col);
-    SDL_Surface* surf = TTF_RenderText_LCD(m_font, text.c_str(), col, {0, 0, 0, 255});
-    if (!surf) return;
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(m_ren, surf);
-    SDL_FreeSurface(surf);
-    if (!tex) return;
-    int w, h;
-    SDL_QueryTexture(tex, nullptr, nullptr, &w, &h);
-    SDL_Rect dst = {x, y, w, h};
-    SDL_RenderCopy(m_ren, tex, nullptr, &dst);
-    SDL_DestroyTexture(tex);
+
+    // Cache key includes colour so its reusable for different coloured texts
+    char key_buf[256];
+    snprintf(key_buf, sizeof(key_buf), "%s_%d_%d_%d", text.c_str(), r, g, b);
+    std::string key(key_buf);
+
+    auto it = m_text_cache.find(key);
+    if (it == m_text_cache.end()) {
+        // if not cached, render the text surface and create a texture (once)
+        SDL_Color col = {r, g, b, 255};
+        SDL_Surface* surf = TTF_RenderText_LCD(m_font, text.c_str(),
+                                               col, {0, 0, 0, 255});
+        if (!surf) return;
+        SDL_Texture* tex = SDL_CreateTextureFromSurface(m_ren, surf);
+        SDL_FreeSurface(surf);
+        if (!tex) return;
+
+        CachedText ct;
+        ct.texture = tex;
+        SDL_QueryTexture(tex, nullptr, nullptr, &ct.w, &ct.h);
+        m_text_cache[key] = ct;
+        it = m_text_cache.find(key);
+    }
+
+    SDL_Rect dst = {x, y, it->second.w, it->second.h};
+    SDL_RenderCopy(m_ren, it->second.texture, nullptr, &dst);
+}
+
+void Renderer::clear_text_cache() {
+    for (auto& [key, ct] : m_text_cache)
+        SDL_DestroyTexture(ct.texture);
+    m_text_cache.clear();
 }
 
 void Renderer::update_fps(uint32_t now_ms) {
