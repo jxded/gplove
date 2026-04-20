@@ -1,26 +1,21 @@
 #include "renderer.h"
 #include <cmath>
 #include <cstdio>
+#include <SDL2_gfxPrimitives.h>
 
 static constexpr float PI = 3.14159265f;
 
 void Renderer::draw_circle_outline(int cx, int cy, int r) {
-    const int pts = 64;
-    for (int i = 0; i < pts; ++i) {
-        float a0 = 2.0f * PI * i       / pts;
-        float a1 = 2.0f * PI * (i + 1) / pts;
-        SDL_RenderDrawLine(m_ren,
-            cx + (int)(cosf(a0) * r), cy + (int)(sinf(a0) * r),
-            cx + (int)(cosf(a1) * r), cy + (int)(sinf(a1) * r));
-    }
+    uint8_t rr, gg, bb, aa;
+    SDL_GetRenderDrawColor(m_ren, &rr, &gg, &bb, &aa);
+    circleRGBA(m_ren, cx, cy, r, rr, gg, bb, aa);
 }
 
-// uses points list and SDL_RenderDrawPoints (plural) to batch & reduce gpu draw calls..
+// Uusing GFXPrimitives for more optimised rendering
 void Renderer::draw_filled_circle(int cx, int cy, int r) {
-    if (!m_circle_tex) return;
-    SDL_Rect dst = {cx - r, cy - r, r * 2, r * 2};
-    // TODO add tint/fades
-    SDL_RenderCopy(m_ren, m_circle_tex, nullptr, &dst);
+    uint8_t rr, gg, bb, aa;
+    SDL_GetRenderDrawColor(m_ren, &rr, &gg, &bb, &aa);
+    filledCircleRGBA(m_ren, cx, cy, r, rr, gg, bb, aa);
 }
 
 bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
@@ -32,12 +27,6 @@ bool Renderer::init(SDL_Renderer* ren, const Config& cfg) {
         fprintf(stderr, "TTF_OpenFont failed: %s\n", TTF_GetError());
         return false;
     }
-
-    //preallocate buffers to avoid millions of mallocs..
-    m_point_buf.reserve(16200);
-    m_circle_buf.reserve(1024);
-
-    m_circle_tex = create_circle_texture(15);
 
     return true;
 }
@@ -55,34 +44,6 @@ void Renderer::begin_frame() {
 
 void Renderer::end_frame() {
     SDL_RenderPresent(m_ren);
-}
-// testing pre-rendered circle texture..
-SDL_Texture* Renderer::create_circle_texture(int r) {
-    int size = r * 2;
-    SDL_Texture* tex = SDL_CreateTexture(
-        m_ren,
-        SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_TARGET,
-        size, size);
-    if (!tex) return nullptr;
-
-    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
-
-    SDL_Texture* old = SDL_GetRenderTarget(m_ren);
-    SDL_SetRenderTarget(m_ren, tex);
-
-    SDL_SetRenderDrawColor(m_ren, 0, 0, 0, 0);
-    SDL_RenderClear(m_ren);
-
-    SDL_SetRenderDrawColor(m_ren, 255, 255, 255, 255);
-    for (int dy = -r; dy <= r; ++dy) {
-        int dx = (int)sqrtf((float)(r * r - dy * dy));
-        for (int x = -dx; x <= dx; ++x)
-            SDL_RenderDrawPoint(m_ren, r + x, r + dy);
-    }
-
-    SDL_SetRenderTarget(m_ren, old);
-    return tex;
 }
 
 // helper method for text rendering with caching to improve performance
@@ -141,26 +102,20 @@ void Renderer::draw_stick(int cx, int cy, const StickTrail& trail, bool pressed,
     SDL_SetRenderDrawColor(m_ren, 50, 50, 50, 255);
     draw_circle_outline(cx, cy, range);
 
-    // trail points (batched draw call)
-    m_point_buf.clear();
-    SDL_SetRenderDrawBlendMode(m_ren, SDL_BLENDMODE_BLEND);
+    // trail points (gfxPrimitives)
     for (auto& pt : trail.points()) {
-        float age   = float(now_ms - pt.timestamp_ms);
+        float age = float(now_ms - pt.timestamp_ms);
         uint8_t alpha = 255;
         if (age > m_cfg.trail_duration_ms) {
             float t = (age - m_cfg.trail_duration_ms) / m_cfg.fade_duration_ms;
             alpha = (uint8_t)(255.0f * (1.0f - t));
         }
+
         int px = cx + (int)(pt.x * range);
         int py = cy + (int)(pt.y * range);
-        SDL_SetRenderDrawColor(m_ren, tr, tg, tb, alpha);
-        for (int dy = -5; dy <= 5; ++dy)
-            for (int dx = -5; dx <= 5; ++dx)
-                if (dx*dx + dy*dy <= 25)
-                    m_point_buf.push_back({px+dx, py+dy});
-                //tradeoff: loss of individualised alpha for each point, testing
+
+        filledCircleRGBA(m_ren, px, py, 5, tr, tg, tb, alpha);
     }
-    SDL_RenderDrawPoints(m_ren, m_point_buf.data(), m_point_buf .size());
 
     if (trail.points().empty()) return;
 

@@ -9,6 +9,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL2       REQUIRED sdl2)
 pkg_check_modules(SDL2_TTF   REQUIRED SDL2_ttf)
 pkg_check_modules(SDL2_IMAGE REQUIRED SDL2_image)
+pkg_check_modules(SDL2_GFX   REQUIRED SDL2_gfx)
 
 add_executable(gplove
     src/main.cpp
@@ -21,6 +22,7 @@ target_include_directories(gplove PRIVATE
     ${SDL2_INCLUDE_DIRS}
     ${SDL2_TTF_INCLUDE_DIRS}
     ${SDL2_IMAGE_INCLUDE_DIRS}
+    ${SDL2_GFX_INCLUDE_DIRS}
 )
 
 target_compile_options(gplove PRIVATE
@@ -32,6 +34,7 @@ target_link_libraries(gplove PRIVATE
     ${SDL2_LIBRARIES}
     ${SDL2_TTF_LIBRARIES}
     ${SDL2_IMAGE_LIBRARIES}
+    ${SDL2_GFX_LIBRARIES}
 )
 
 add_custom_command(TARGET gplove POST_BUILD
