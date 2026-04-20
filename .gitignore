@@ -1,5 +1,6 @@
 build-native/
 build-aarch64/
+.profiling_artifacts/
 
 .DS_Store
 Thumbs.db
