@@ -84,7 +84,7 @@ export LDFLAGS="-L$(brew --prefix)/lib"
 export CPPFLAGS="-I$(brew --prefix)/include"
 ```
 
-### Cross compiling to AArch64 linux:
+### Cross compiling to AArch64 linux: (WIP)
 ```bash
 make configure-cross
 make build-cross
