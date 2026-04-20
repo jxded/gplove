@@ -15,7 +15,7 @@ An SDL2-based rewrite of my popular GPLöve input tester application for anberni
 
 ## Building, Prototyping, Contributing:
 
-## Requirements
+### Requirements
 
 - `cmake` 3.20+
 - C++17 compiler
