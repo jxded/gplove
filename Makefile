@@ -37,6 +37,16 @@ run-native:
 	  SDL_GAMECONTROLLERCONFIG_FILE=../assets/gamecontrollerdb.txt \
 	  ./gplove
 
+run-native-release:
+	PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+	LDFLAGS="$(LDFLAGS)" \
+	CPPFLAGS="$(CPPFLAGS)" \
+	cmake -B $(BUILD_NATIVE) -DCMAKE_BUILD_TYPE=Release -G Ninja --log-level=WARNING
+	cmake --build $(BUILD_NATIVE) -j$(NPROC) # --quiet
+	cd $(BUILD_NATIVE) && \
+	  SDL_GAMECONTROLLERCONFIG_FILE=../assets/gamecontrollerdb.txt \
+	  ./gplove
+
 # aarch64 cross-compile 
 configure-cross:
 	PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
