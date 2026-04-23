@@ -1,7 +1,7 @@
 # gplove
 
 An SDL2-based rewrite of my popular GPLöve input tester application for anbernic's H700 line of gaming handheld devices, originally depended on a compiled löve2D engine binary.
-
+![img](img/gplove.jpg)
 ## Features
 
 - SDL2 game controller support
