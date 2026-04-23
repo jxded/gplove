@@ -1,3 +1,6 @@
+# Load optional local dotenv overrides
+-include .env
+
 # OS Detection for toolchain 
 UNAME_S := $(shell uname -s)
 
@@ -7,6 +10,7 @@ ifeq ($(UNAME_S), Darwin)
   TOOLCHAIN     = cmake/aarch64-toolchain-mac.cmake
   CROSS_STRIP   = aarch64-unknown-linux-gnu-strip
   CROSS_READELF = aarch64-unknown-linux-gnu-readelf
+  # Must include homebrew paths for pkg-config to find SDL2 and other deps
   BREW_PREFIX   := $(shell brew --prefix)
   PKG_CONFIG_PATH := $(BREW_PREFIX)/lib/pkgconfig:$(PKG_CONFIG_PATH)
   LDFLAGS       := -L$(BREW_PREFIX)/lib $(LDFLAGS)
@@ -19,10 +23,18 @@ else
   CROSS_READELF = aarch64-linux-gnu-readelf
 endif
 
+# For cross-compilation, set this to your Buildroot SDK path
+BUILDROOT_SDK ?= $(HOME)/aarch64-buildroot-linux-gnu_sdk-buildroot/aarch64-buildroot-linux-gnu
+
+SYSROOT       := $(BUILDROOT_SDK)/sysroot
+PKG_CONFIG_LIBDIR ?= $(SYSROOT)/usr/lib/pkgconfig
+PKG_CONFIG_SYSROOT_DIR ?= $(SYSROOT)
+
 # For deployment, set these env vars to ssh target
-DEVICE        ?= rg35xxh
+DEVICE        ?= $(DEVICE_IP)
 DEVICE_USER   ?= root
-REMOTE_PATH    = /mnt/mmc/MUOS/application/gplove
+DEVICE_PASS   ?= root
+REMOTE_PATH    = /mnt/mmc/MUOS/application/.gplove2
 BUILD_AARCH64  = build-aarch64
 BUILD_NATIVE   = build-native
 
@@ -49,11 +61,15 @@ run-native-release:
 
 # aarch64 cross-compile 
 configure-cross:
-	PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
-	LDFLAGS="$(LDFLAGS)" \
-	CPPFLAGS="$(CPPFLAGS)" \
+	rm -rf $(BUILD_AARCH64)
+	PKG_CONFIG_PATH="$(PKG_CONFIG_LIBDIR)" \
+	PKG_CONFIG_LIBDIR="$(PKG_CONFIG_LIBDIR)" \
+	PKG_CONFIG_SYSROOT_DIR="$(PKG_CONFIG_SYSROOT_DIR)" \
+	CPPFLAGS="" LDFLAGS="" \
 	cmake -B $(BUILD_AARCH64) \
 	  -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) \
+	  -DTARGET_SYSROOT=$(SYSROOT) \
+	  -DCMAKE_SYSROOT=$(SYSROOT) \
 	  -DCMAKE_BUILD_TYPE=Release \
 	  -G Ninja
 
@@ -69,16 +85,16 @@ check:
 deploy: build-cross
 	ssh $(DEVICE_USER)@$(DEVICE) "mkdir -p $(REMOTE_PATH)/libs $(REMOTE_PATH)/assets"
 	scp $(BUILD_AARCH64)/gplove          $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/
-	scp -r assets/                         $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/assets/
+	scp -r assets/                         $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/
 	scp -r libs/aarch64/*                  $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/libs/
-	scp packaging/muos/gplove.sh         $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/
+	scp packaging/muos/gplove.sh         $(DEVICE_USER)@$(DEVICE):$(REMOTE_PATH)/../
 	ssh $(DEVICE_USER)@$(DEVICE) \
-	  "chmod +x $(REMOTE_PATH)/gplove $(REMOTE_PATH)/gplove.sh"
+	  "chmod +x $(REMOTE_PATH)/gplove $(REMOTE_PATH)/../gplove.sh"
 	@echo "DONE: Deployed to $(DEVICE):$(REMOTE_PATH)"
 
 # Run on device 
 run-device:
-	ssh $(DEVICE_USER)@$(DEVICE) "$(REMOTE_PATH)/gplove.sh"
+	ssh $(DEVICE_USER)@$(DEVICE) "$(REMOTE_PATH)/../gplove.sh"
 
 # Full device loop, build, deploy, run on-device
 dev: deploy run-device

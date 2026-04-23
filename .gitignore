@@ -5,7 +5,9 @@ build-aarch64/
 .DS_Store
 Thumbs.db
 
+.env
 .vscode/
+.cache/
 
 # symlinked for LSP support from build directories
 compile_commands.json  
