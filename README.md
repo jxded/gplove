@@ -84,7 +84,25 @@ export LDFLAGS="-L$(brew --prefix)/lib"
 export CPPFLAGS="-I$(brew --prefix)/include"
 ```
 
-### Cross compiling to AArch64 linux: (WIP)
+### Cross compiling to AArch64 linux:
+To avoid having to build and install aarch64 target headers and libraries on your host machine, use a prebuilt Buildroot SDK:
+
+```bash
+cd ~
+curl -L -o aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz \
+  https://github.com/knulli-cfw/toolchains/releases/download/rg35xx-plush-sdk-20240421/aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
+
+tar xzf aarch64-buildroot-linux-gnu_sdk-buildroot.tar.gz
+```
+
+Then set `BUILDROOT_SDK` in `.env` to:
+
+```bash
+BUILDROOT_SDK=$HOME/aarch64-buildroot-linux-gnu_sdk-buildroot
+```
+
+After that, run:
+
 ```bash
 make configure-cross
 make build-cross
@@ -92,12 +110,12 @@ make build-cross
 
 ### Deploy to device
 This assumes your device has SSH/SFTP support. 
-Set the following vars in `Makefile`:
+Set the following vars in `Makefile` or `.env` (follow `.env.example`):
 ```makefile
 # For deployment, set these env vars to ssh target
-DEVICE        ?= rg35xxh
+DEVICE        ?= $(DEVICE_IP) (<-- set in .env)
 DEVICE_USER   ?= root
-REMOTE_PATH    = /mnt/mmc/MUOS/application/gplove
+DEVICE_PASS   ?= root
 ```
 if needed, adjust the launch script `(TODO)` and then: 
 ```bash
@@ -107,4 +125,6 @@ make run-device
 #if needed:
 make kill
 ```
+
+do note that executing an application through ssh can cause framebuffer glitches due to how muOS composits its interface. `make deploy` should also add the application launcher directly to the OS's applications folder, which prevents this from happening. (Tested MuOS 2401.1 Banana only)
 
